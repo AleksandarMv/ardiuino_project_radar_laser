@@ -1,9 +1,9 @@
 #include <Servo.h>
 
-#define _TASK_SLEEP_ON_IDLE_RUN
+
 #define _TASK_PRIORITY
-#define _TASK_WDT_IDS
-#define _TASK_TIMECRITICAL
+
+
 #include <TaskScheduler.h>
 //#################################### DEFINE PINS
 #define servoPin_radar 15  //pin del servo che gira il sensore ultrasonico
@@ -112,7 +112,7 @@ int target_position = 0;
 void get_target_task_func(){
   distance_global = get_distance(TRIG,ECHO,TRIG_TIME,out_of_range);
   Serial.printf("distanza : %.3f      state : %d      position : %d     dir : %d      min/max_dynamic:%d %d\n",distance_global,scan_state,posVal_global,dir,min_angle_dynamic,max_angle_dynamic);
-  if((distance_global >= 50 || distance_global == 0) && scan_state == 1){
+  if((distance_global >= 50 || distance_global <= 1) && scan_state == 1){
     laserOff(pin_Laser);
     scan_state = 2;
   }
@@ -126,7 +126,7 @@ void get_target_task_func(){
   }
 }
 
-int focus_range = 0;//viene multiplicato per 5
+int focus_range = 1;//viene multiplicato per 5
 int state_2_iterator = 0;
 void scan_task_func(){
   if(scan_state == 0){
@@ -134,29 +134,30 @@ void scan_task_func(){
   }
   if(scan_state == 1){
     move_to(servo_us, target_position);
-    max_angle_dynamic = posVal_global + 5;
-    min_angle_dynamic = posVal_global - 5;
+    max_angle_dynamic = target_position + 15;
+    min_angle_dynamic = target_position - 15;
   }
   if(scan_state == 2){
     state_2_iterator++;
 
-    if(state_2_iterator % 100 == 0){
+    if(state_2_iterator % 30 == 0){
       focus_range += 1;
     }
-    max_angle_dynamic = posVal_global + 5 * focus_range;
-    min_angle_dynamic = posVal_global - 5 * focus_range;
+    max_angle_dynamic = target_position + 15 * focus_range;
+    Serial.printf("focus range :  %d \n",focus_range);
+    min_angle_dynamic = target_position - 15 * focus_range;
     if(max_angle_dynamic > max_angle_default){
       max_angle_dynamic = max_angle_default;
     }
     if(min_angle_dynamic < min_angle_default){
       min_angle_dynamic = min_angle_default;
     }
-    if(max_angle_dynamic / 2 + 5 * focus_range >= max_angle_default/2){
+    if(max_angle_dynamic >= max_angle_default && min_angle_dynamic <= min_angle_default){
       scan_state = 0;
       max_angle_dynamic = max_angle_default;
       min_angle_dynamic = min_angle_default;
       scan(servo_us,&posVal_global,&dir,&max_angle_dynamic,&min_angle_dynamic);
-      focus_range = 0;
+      focus_range = 1;
       return;
     }
     else{
@@ -183,7 +184,10 @@ void setup() {
   servo_us.write(90);
   posVal_global = 90;
   servo_ls.attach(servoPin_laser,500,2500);
-  servo_us.write(90);
+  servo_ls.write(90);
+  
+
+  delay(10000);
   //setup laser 
   pinMode(pin_Laser, OUTPUT);
 
