@@ -126,7 +126,7 @@ void get_target_task_func(){
   }
 }
 
-int focus_range = 1;//viene multiplicato per 5
+int focus_range = 1;//viene multiplicato per 15
 int state_2_iterator = 0;
 void scan_task_func(){
   if(scan_state == 0){
